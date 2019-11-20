@@ -1,32 +1,81 @@
+const fs = require('fs')
+const axios = require("axios");
+const inquirer = require("inquirer");
+const util = require("util");
+const writeFileAsync = util.promisify(fs.writeFile);
+const convertHTMLToPDF = require("pdf-puppeteer");
+ 
+var callback = function (pdf) {
+  writeFileAsync('githubProfile.pdf', pdf);
+}
 
-const colors = {
-    green: {
-      wrapperBackground: "#E6E1C3",
-      headerBackground: "#C1C72C",
-      headerColor: "black",
-      photoBorderColor: "#black"
-    },
-    blue: {
-      wrapperBackground: "#5F64D3",
-      headerBackground: "#26175A",
-      headerColor: "white",
-      photoBorderColor: "#73448C"
-    },
-    pink: {
-      wrapperBackground: "#879CDF",
-      headerBackground: "#FF8374",
-      headerColor: "white",
-      photoBorderColor: "#FEE24C"
-    },
-    red: {
-      wrapperBackground: "#DE9967",
-      headerBackground: "#870603",
-      headerColor: "white",
-      photoBorderColor: "white"
-    }
-  };
-  
-  function generateHTML(data) {
+let username = '';
+let bio = '';
+let name = '';
+let location = '';
+let profile = '';
+let picture = '';
+let followers = 0;
+let following = 0;
+let repos = 0;
+let starsLink = '';
+let stars = 0;
+
+function getGithub(){
+  return inquirer
+    .prompt({
+      message: "Enter your GitHub username",
+      name: "username"
+    })
+    .then(function({ username }) {
+      const queryUrl = `https://api.github.com/users/${username}`;
+      axios
+      .get(queryUrl)
+      .then(function(res) {
+        const results = res.data;
+        console.log(results);
+        name = results.name;
+        username = results.login;
+        location = results.location;
+        profile = results.html_url;
+        bio = results.bio;
+        followers = results.followers;
+        following = results.following;
+        repos = results.public_repos;
+        picture = results.avatar_url;
+        const html = generateHTML(name, username, bio, location, profile, following, followers, repos, picture);
+        convertHTMLToPDF(html, callback);
+    });
+    });
+  }
+
+  function generateHTML(name, username, bio, location, profile, following, followers, repos, picture) {
+    const colors = {
+      green: {
+        wrapperBackground: "#E6E1C3",
+        headerBackground: "#C1C72C",
+        headerColor: "black",
+        photoBorderColor: "#black"
+      },
+      blue: {
+        wrapperBackground: "#5F64D3",
+        headerBackground: "#26175A",
+        headerColor: "white",
+        photoBorderColor: "#73448C"
+      },
+      pink: {
+        wrapperBackground: "#879CDF",
+        headerBackground: "#FF8374",
+        headerColor: "white",
+        photoBorderColor: "#FEE24C"
+      },
+      red: {
+        wrapperBackground: "#DE9967",
+        headerBackground: "#870603",
+        headerColor: "white",
+        photoBorderColor: "white"
+      }
+    };
     return `<!DOCTYPE html>
   <html lang="en">
      <head>
@@ -49,11 +98,8 @@ const colors = {
            padding: 0;
            margin: 0;
            }
-           html, body, .wrapper {
-           height: 100%;
-           }
            .wrapper {
-           background-color: ${colors[data.color].wrapperBackground};
+           background-color: ${colors.red.wrapperBackground};
            padding-top: 100px;
            }
            body {
@@ -71,22 +117,22 @@ const colors = {
            margin: 0;
            }
            h1 {
-           font-size: 3em;
-           }
-           h2 {
-           font-size: 2.5em;
-           }
-           h3 {
            font-size: 2em;
            }
-           h4 {
+           h2 {
            font-size: 1.5em;
            }
+           h3 {
+           font-size: 1em;
+           }
+           h4 {
+           font-size: 1em;
+           }
            h5 {
-           font-size: 1.3em;
+           font-size: 1em;
            }
            h6 {
-           font-size: 1.2em;
+           font-size: 1em;
            }
            .photo-header {
            position: relative;
@@ -95,8 +141,8 @@ const colors = {
            display: flex;
            justify-content: center;
            flex-wrap: wrap;
-           background-color: ${colors[data.color].headerBackground};
-           color: ${colors[data.color].headerColor};
+           background-color: ${colors.red.headerBackground};
+           color: ${colors.red.headerColor};
            padding: 10px;
            width: 95%;
            border-radius: 6px;
@@ -107,7 +153,7 @@ const colors = {
            border-radius: 50%;
            object-fit: cover;
            margin-top: -75px;
-           border: 6px solid ${colors[data.color].photoBorderColor};
+           border: 6px solid ${colors.red.photoBorderColor};
            box-shadow: rgba(0, 0, 0, 0.3) 4px 1px 20px 4px;
            }
            .photo-header h1, .photo-header h2 {
@@ -148,11 +194,17 @@ const colors = {
            }
   
            .card {
-             padding: 20px;
-             border-radius: 6px;
-             background-color: ${colors[data.color].headerBackground};
-             color: ${colors[data.color].headerColor};
-             margin: 20px;
+            padding: 20px;
+            border-radius: 6px;
+            flex-basis: 45%;
+            background-color: #870603;
+            color: white;
+            margin: 0 auto;
+            margin-top: 100px;
+            margin-left: 30px;
+            margin-bottom: 30px;
+             background-color: ${colors.red.headerBackground};
+             color: ${colors.red.headerColor};
            }
            
            .col {
@@ -171,6 +223,50 @@ const colors = {
               zoom: .75; 
             } 
            }
-        </style>`
-          }
+        </style>
+        <body>
+        <div class="wrapper">
+              <div class="main">
+                <div class="photo-header">
+                <img src = ${picture}/>
+                <h1>${name}</h1>
+                <h2>${username}</h2>
+                <h2>${bio}</h2>
+                <div class="links-nav">
+                <div class="nav-link">
+                <a href='${profile}'>Github</a><br>
+                ${profile}
+                </div>
+                <div class="nav-link">
+                <a href="https://www.google.com/maps/place/${location}">Location</a><br>
+                ${location}
+                </div>
+        </div>
+        </div>
+        <div class="row">
+        <div class="card">
+        <h2>Followers: ${followers}</h2>
+        <h2>Following: ${following}</h2>
+        </div>
+        <div class="card">
+        <h2>Repos: ${repos}</h2>
+        </div>
+        </div>
+        <div id="print-this">
+        <button id ="print-this-btn">Print this resume</button>
+        </div>
+      </body>
+      </html>
+      `
+    }
   
+    async function init(){
+      try{
+        await getGithub();
+    
+      }catch(error){
+        console.log(error);
+      }
+    }
+    
+    init();
